@@ -1,6 +1,7 @@
 'use strict';
 
 const express = require('express');
+const knex = require('../knex');
 
 // Create an router instance (aka "mini-app")
 const router = express.Router();
@@ -16,6 +17,21 @@ const notes = simDB.initialize(data);
 /* ========== GET/READ ALL NOTES ========== */
 router.get('/notes', (req, res, next) => {
   const { searchTerm } = req.query;
+  const query = 
+    knex('notes')
+      .select();
+
+  if (!req.query.searchTerm) {
+    query
+      .then(list => res.json(list))
+      .catch(err => next(err));
+  } else {
+    console.log('hi');
+    query
+      .where({'title': `${searchTerm}`})
+      .then(list => res.json(list))
+      .catch(err => next(err));
+  }
   /* 
   notes.filter(searchTerm)
     .then(list => {
