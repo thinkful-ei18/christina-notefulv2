@@ -17,6 +17,15 @@ const notes = simDB.initialize(data);
 /* ========== GET/READ ALL NOTES ========== */
 router.get('/notes', (req, res, next) => {
   const { searchTerm } = req.query;
+
+  // knex('notes')
+  //   .select()
+  //   !req.query.searchTerm ? '' : `.where({'title': ${searchTerm}})`
+  //   .then(list => res.json(list))
+  //   .catch(err => next(err));
+
+
+
   const query = 
     knex('notes')
       .select();
@@ -26,37 +35,31 @@ router.get('/notes', (req, res, next) => {
       .then(list => res.json(list))
       .catch(err => next(err));
   } else {
-    console.log('hi');
     query
-      .where({'title': `${searchTerm}`})
+      .whereRaw((res.body.title).contains(`${searchTerm}`))
+      //({'title': `${searchTerm}`})
       .then(list => res.json(list))
       .catch(err => next(err));
   }
-  /* 
-  notes.filter(searchTerm)
-    .then(list => {
-      res.json(list);
-    })
-    .catch(err => next(err)); 
-  */
 });
+
+
+
+
 
 /* ========== GET/READ SINGLE NOTES ========== */
 router.get('/notes/:id', (req, res, next) => {
   const noteId = req.params.id;
-
-  /*
-  notes.find(noteId)
-    .then(item => {
-      if (item) {
-        res.json(item);
-      } else {
-        next();
-      }
-    })
+  knex('notes')
+    .select()
+    .where({'id' : `${noteId}`})
+    .then(note => res.json(note))
     .catch(err => next(err));
-  */
 });
+
+
+
+
 
 /* ========== PUT/UPDATE A SINGLE ITEM ========== */
 router.put('/notes/:id', (req, res, next) => {
@@ -69,7 +72,6 @@ router.put('/notes/:id', (req, res, next) => {
     if (field in req.body) {
       updateObj[field] = req.body[field];
     }
-  });
 
   /***** Never trust users - validate input *****/
   if (!updateObj.title) {
@@ -78,18 +80,17 @@ router.put('/notes/:id', (req, res, next) => {
     return next(err);
   }
 
-  /*
-  notes.update(noteId, updateObj)
-    .then(item => {
-      if (item) {
-        res.json(item);
-      } else {
-        next();
-      }
-    })
-    .catch(err => next(err));
-  */
+  knex('notes')
+  .where({'id' : `${noteId}`})
+  .update({
+    'title': `${req.body.title}`,
+    'content' : `${req.body.content}`
+  })
+  .then(note => res.json(note))
+  .catch(err => next(err));
+  });
 });
+
 
 /* ========== POST/CREATE ITEM ========== */
 router.post('/notes', (req, res, next) => {
@@ -103,20 +104,22 @@ router.post('/notes', (req, res, next) => {
     return next(err);
   }
 
-  /*
-  notes.create(newItem)
-    .then(item => {
-      if (item) {
-        res.location(`http://${req.headers.host}/notes/${item.id}`).status(201).json(item);
-      } 
-    })
-    .catch(err => next(err));
-  */
+  knex('notes')
+    .insert(newItem)
+    .then(note => res.json(note))
+    .catch(err => next(err)); 
+
 });
 
 /* ========== DELETE/REMOVE A SINGLE ITEM ========== */
 router.delete('/notes/:id', (req, res, next) => {
   const id = req.params.id;
+
+  knex('notes')
+    .where({'id' : `${id}`})
+    .del()
+    .then(note => res.json(note))
+    .catch(err => next(err));
   
   /*
   notes.delete(id)
