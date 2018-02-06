@@ -26,21 +26,17 @@ router.get('/notes', (req, res, next) => {
 
 
 
-  const query = 
-    knex('notes')
-      .select();
 
-  if (!req.query.searchTerm) {
-    query
+  knex('notes')
+      .select('notes.id', 'title', 'content')
+      .where(function () {
+        if (searchTerm) {
+        this.where('title', 'like', `%${searchTerm}%`)
+          .orWhere('content', 'like', `%${searchTerm}%`)
+        }
+      })
       .then(list => res.json(list))
       .catch(err => next(err));
-  } else {
-    query
-      .whereRaw((res.body.title).contains(`${searchTerm}`))
-      //({'title': `${searchTerm}`})
-      .then(list => res.json(list))
-      .catch(err => next(err));
-  }
 });
 
 
@@ -51,9 +47,9 @@ router.get('/notes', (req, res, next) => {
 router.get('/notes/:id', (req, res, next) => {
   const noteId = req.params.id;
   knex('notes')
-    .select()
-    .where({'id' : `${noteId}`})
-    .then(note => res.json(note))
+    .select('notes.id', 'title', 'content')
+    .where({'notes.id' : `${noteId}`})
+    .then(note => res.json(note[0]))
     .catch(err => next(err));
 });
 
