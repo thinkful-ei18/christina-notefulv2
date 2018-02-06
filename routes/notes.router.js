@@ -18,20 +18,12 @@ const notes = simDB.initialize(data);
 router.get('/notes', (req, res, next) => {
   const { searchTerm } = req.query;
 
-  // knex('notes')
-  //   .select()
-  //   !req.query.searchTerm ? '' : `.where({'title': ${searchTerm}})`
-  //   .then(list => res.json(list))
-  //   .catch(err => next(err));
-
-
-
-
   knex('notes')
       .select('notes.id', 'title', 'content')
       .where(function () {
         if (searchTerm) {
-        this.where('title', 'like', `%${searchTerm}%`)
+          this.whereRaw('LOWER("title") = ?', 'like', `%${searchTerm}%`)
+        //this.where('title', 'like', `%${searchTerm}%`)
           .orWhere('content', 'like', `%${searchTerm}%`)
         }
       })
