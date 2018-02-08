@@ -2,6 +2,7 @@
 
 const express = require('express');
 const knex = require('../knex');
+const Treeize = require('treeize');
 
 
 const router = express.Router();
@@ -9,32 +10,48 @@ const router = express.Router();
 
 // GET ALL NOTES AND HANDLE SEARCH
 router.get('/notes', (req, res, next) => {
-  const { searchTerm, folderId } = req.query;
+  const { searchTerm, folderId, tagId } = req.query;
 
   knex
     // return 'notes id' && 'note title' && 'note content' && 'foler id' && 'folder.name ALIAS folder_name'
-    .select('notes.id', 'title', 'content', 'folder_id', 'folders.name as folder_name')
+    .select('notes.id', 'title', 'content', 'folder_id', 'folders.name as folder_name', 'tags.id as tags:id', 'tags.name as tags:name')
     // looking in the notes table
     .from('notes')
     // JOIN notes table with folder AT 'notes.folder id' (from notes table) && 'folder id' (from folder table)
     .leftJoin('folders', 'notes.folder_id', 'folders.id')
+    // JOIN notes table with notes_tags AT notes.id column (from notes table) && note id column (from notes_tags table)
+    .leftJoin('notes_tags', 'notes.id', 'notes_tags.note_id')
+    // JOIN notes table with tags AT tags id coulmn (from tags table) && tag id column (from notes_tags table)
+    .leftJoin('tags', 'tags.id', 'notes_tags.tag_id')
     // conditional query for searchTerm
     .where(function () {
-      if (req.query.searchTerm) {
-          this.whereRaw('LOWER("title") = ?', 'like', `%${searchTerm}%`)
-          .orWhere('content', 'like', `%${searchTerm}%`)
-        }
+      if (searchTerm) {
+        this.where('title', 'like', `%${searchTerm}%`);
+      }
+    })
+    .where(function () {
       if (folderId) {
-        if (req.query.folderId) {
-          this.where('folder_id', req.query.folderId)
-        }
+        this.where('folder_id', folderId);
+      }
+    })
+    .where(function () {
+      if (tagId) {
+        const selectNoteId = knex.select('notes.id')
+          .from('notes')
+          .innerJoin('notes_tags', 'notes.id', 'notes_tags.note_id')
+          .where('notes_tags.tag_id', tagId);
+        this.whereIn('notes.id', selectNoteId);
       }
     })
     // order results by 'note id' in asc order
     .orderBy('notes.id')
     // then send results as JSON
-    .then(list => {
-      res.json(list);
+    .then(result => {
+      console.log(result);
+      const treeize = new Treeize();
+      treeize.grow(result);
+      const hydrated = treeize.getData();
+      res.json(hydrated);
     })
     .catch(err => next(err));
 });

@@ -26,11 +26,13 @@ CREATE TABLE notes (
 
 ALTER SEQUENCE notes_id_seq RESTART WITH 1000;
 ALTER TABLE notes ADD COLUMN folder_id int REFERENCES folders ON DELETE SET NULL; -- or RESTRICT
+ALTER TABLE notes ADD COLUMN tag_id int REFERENCES tags ON DELETE SET NULL;
 
 CREATE TABLE notes_tags (
   note_id INTEGER NOT NULL REFERENCES notes ON DELETE CASCADE,
   tag_id INTEGER NOT NULL REFERENCES tags ON DELETE CASCADE
 );
+
 INSERT INTO folders (name) VALUES
   ('Archive'),
   ('Drafts'),
@@ -75,9 +77,4 @@ INSERT INTO notes_tags (note_id, tag_id) VALUES
 (1001, 1),
 (1002, 1), (1002, 2),
 (1003, 1), (1003, 2), (1003, 3),
-(1004, 1), (1004, 2), (1004, 3), (1004, 4),
-(1005, 2),
-(1006, 2), (1006, 3), (1006, 4),
-(1007, 3),
-(1008, 3), (1008, 4),
-(1009, 4);
+(1004, 1), (1004, 2), (1004, 3), (1004, 4);
