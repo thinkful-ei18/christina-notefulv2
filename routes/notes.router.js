@@ -6,6 +6,7 @@ const knex = require('../knex');
 
 const router = express.Router();
 
+
 // GET ALL NOTES AND HANDLE SEARCH
 router.get('/notes', (req, res, next) => {
   const { searchTerm, folderId } = req.query;
