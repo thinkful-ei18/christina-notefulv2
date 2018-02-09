@@ -178,16 +178,26 @@ describe('GET /v2/notes', function () {
 describe('GET /v2/notes/:id', function () {
 
   it('should return correct notes', function () {
-    return chai.request(app)
-      .get('/v2/notes/1000')
-      .then(function (res) {
-        expect(res).to.have.status(200);
-        expect(res).to.be.json;
-        expect(res.body).to.be.an('object');
-        expect(res.body).to.include.keys('id', 'title', 'content');
-        expect(res.body.id).to.equal(1000);
-        expect(res.body.title).to.equal('5 life lessons learned from cats');
+    let data;
+    knex
+      .select()
+      .from('notes')
+      .where('id', 1000)
+      .then((_data) => {
+        data = _data;
+        return chai.request(app).get('/v2/notes/1000')
+        .then(function (res) {
+          expect(res).to.have.status(200);
+          expect(res).to.be.json;
+          expect(res.body).to.be.an('object');
+          expect(res.body).to.include.keys('id', 'title', 'content');
+          expect(res.body.id).to.equal(1000);
+          expect(res.body.title).to.equal('5 life lessons learned from cats');
+          expect(data[0].id).to.equal(1000);
+          expect(data[0].title).to.equal('5 life lessons learned from cats');
       });
+    });
+    
   });
 
   it('should respond with a 404 for an invalid id', function () {
