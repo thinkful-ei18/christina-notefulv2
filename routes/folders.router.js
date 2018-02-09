@@ -94,8 +94,7 @@ router.put('/folders/:id', (req, res, next) => {
 
 /* ========== DELETE/REMOVE A SINGLE ITEM ========== */
 router.delete('/folders/:id', (req, res, next) => {
-  knex
-    .del()
+  knex.del()
     .where('id', req.params.id)
     .from('folders')
     .then(count => {

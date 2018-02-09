@@ -1,73 +1,50 @@
 'use strict';
 
 const express = require('express');
-const knex = require('../knex');
-const { UNIQUE_VIOLATION } = require('pg-error-constants');
 const router = express.Router();
 
-// GET ALL TAGS
+const knex = require('../knex');
+const { UNIQUE_VIOLATION } = require('pg-error-constants');
+
+/* ========== GET/READ ALL TAGS ========== */
 router.get('/tags', (req, res, next) => {
-  knex
-    .select()
+  knex.select('id', 'name')
     .from('tags')
-    .then((results => {
+    .then(results => {
       res.json(results);
-    }))
+    })
     .catch(next);
 });
 
-// GET TAG BY ID
+/* ========== GET/READ SINGLE TAGS ========== */
 router.get('/tags/:id', (req, res, next) => {
-  const noteId = req.params.id;
-
-  knex
-    .select()
+  knex.select('id', 'name')
+    .where('id', req.params.id)
     .from('tags')
-    .where('id', noteId)
-    .then((result) => {
-      res.json(result);
+    .then(result => {
+      if (result) {
+        res.json(result);
+      } else {
+        next();
+      }
     })
     .catch(next);
 });
 
-// UPDATE TAG
-router.put('/tags/:id', (req, res, next) => {
-  const noteId = req.params.id;
-  const { name } = req.body;
-
-  knex
-    .select()
-    .from('tags')
-    .where('id', noteId)
-    .update('name', name)
-    .returning(['id', 'name'])
-    .then((result) => {
-      res.json(result);
-    })
-    .catch(err => {
-      if (err.code === UNIQUE_VIOLATION && err.constraint === 'tags_name_key') {
-        err = new Error('Tag name is already taken');
-        err.status = 409;
-      } 
-      next(err);
-    });
-});
-
-// CREATE TAG
+/* ========== POST/CREATE ITEM ========== */
 router.post('/tags', (req, res, next) => {
   const { name } = req.body;
 
-  // validate input
-  if(!name) {
-    const err = new Error('Missing name in request body');
+  /***** Never trust users. Validate input *****/
+  if (!name) {
+    const err = new Error('Missing `name` in request body');
     err.status = 400;
     return next(err);
   }
 
   const newItem = { name };
 
-  knex
-    .insert(newItem)
+  knex.insert(newItem)
     .into('tags')
     .returning(['id', 'name'])
     .then(([result]) => {
@@ -75,26 +52,56 @@ router.post('/tags', (req, res, next) => {
     })
     .catch(err => {
       if (err.code === UNIQUE_VIOLATION && err.constraint === 'tags_name_key') {
-        err = new Error('Tags name is already in use');
+        err = new Error('Tags name is already taken');
         err.status = 409;
-      }
+      } 
       next(err);
     });
 });
 
-// DELETE TAG
-router.delete('/tags/:id', (req, res, next) => {
-  const noteId = req.params.id;
+/* ========== PUT/UPDATE A SINGLE ITEM ========== */
+router.put('/tags/:id', (req, res, next) => {
+  const { name } = req.body;
 
-  knex
-    .del()
+  /***** Never trust users. Validate input *****/
+  if (!name) {
+    const err = new Error('Missing `name` in request body');
+    err.status = 400;
+    return next(err);
+  }
+
+  const updateItem = { name };
+
+  knex('tags')
+    .update(updateItem)
+    .where('id', req.params.id)
+    .returning(['id', 'name'])
+    .then(([result]) => {
+      if (result) {
+        res.json(result);
+      } else {
+        next(); // fall-through to 404 handler
+      }
+    })
+    .catch(err => {
+      if (err.code === UNIQUE_VIOLATION && err.constraint === 'tags_name_key') {
+        err = new Error('Tags name is already taken');
+        err.status = 409;
+      } 
+      next(err);
+    });
+});
+
+/* ========== DELETE/REMOVE A SINGLE ITEM ========== */
+router.delete('/tags/:id', (req, res, next) => {
+  knex.del()
+    .where('id', req.params.id)
     .from('tags')
-    .where('id', noteId)
     .then(count => {
       if (count) {
         res.status(204).end();
       } else {
-        next(); 
+        next(); // fall-through to 404 handler
       }
     })
     .catch(next);
