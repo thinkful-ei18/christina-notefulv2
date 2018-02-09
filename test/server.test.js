@@ -11,6 +11,8 @@ const chai = require('chai');
 const chaiHttp = require('chai-http');
 const chaiSpies = require('chai-spies');
 const expect = chai.expect;
+const knex = require('../knex');
+const seedData = require('../db/seed');
 
 chai.use(chaiHttp);
 chai.use(chaiSpies);
@@ -27,7 +29,22 @@ describe('Reality check', function () {
 
 });
 
+before(function () {
+  // noop
+});
 
+beforeEach(function () {
+  return seedData();
+});
+
+afterEach(function () {
+  // noop
+});
+
+after(function () {
+  // destroy the connection
+  return knex.destroy();
+});
 
 describe('Express static', function () {
 
