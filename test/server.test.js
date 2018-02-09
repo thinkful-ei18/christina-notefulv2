@@ -154,14 +154,23 @@ describe('GET /v2/notes', function () {
   });
 
   it('should return an empty array for an incorrect query', function () {
-    return chai.request(app)
-      .get('/v2/notes?searchTerm=Not%20a%20Valid%20Search')
-      .then(function (res) {
-        expect(res).to.have.status(200);
-        expect(res).to.be.json;
-        expect(res.body).to.be.a('array');
-        expect(res.body).to.have.length(0);
+    let data;
+    knex
+      .select()
+      .from('notes')
+      .where('title', 'like', 'INCORRECT')
+      .then((_data) => {
+        data = _data;
+        return chai.request(app).get('/v2/notes?searchTerm=Not%20a%20Valid%20Search')
+        .then(function (res) {
+          expect(res).to.have.status(200);
+          expect(res).to.be.json;
+          expect(res.body).to.be.a('array');
+          expect(res.body).to.have.length(0);
+          expect(data).to.be.an('array');
+          expect(data).to.have.length(0);
       });
+    });
   });
 
 });
