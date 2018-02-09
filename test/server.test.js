@@ -17,6 +17,8 @@ const seedData = require('../db/seed');
 chai.use(chaiHttp);
 chai.use(chaiSpies);
 
+// console.log(seedData);
+
 describe('Reality check', function () {
 
   it('true should be true', function () {
@@ -44,6 +46,18 @@ afterEach(function () {
 after(function () {
   // destroy the connection
   return knex.destroy();
+});
+
+describe('Environment', () => {
+
+  it('NODE_ENV should be "test"', () => {
+    expect(process.env.NODE_ENV).to.equal('test');
+  });
+
+  it('connection should be test database', () => {
+    expect(knex.client.connectionSettings.database).to.equal('noteful-test');
+  });
+
 });
 
 describe('Express static', function () {
@@ -80,40 +94,63 @@ describe('404 handler', function () {
 describe('GET /v2/notes', function () {
 
   it('should return the default of 10 Notes ', function () {
-    return chai.request(app)
-      .get('/v2/notes')
-      .then(function (res) {
+    let count;
+    return knex.count()
+      .from('notes')
+      .then(([result]) => {
+        count = Number(result.count);
+        return chai.request(app).get('/v2/notes');
+      })
+    .then( function (res) {
         expect(res).to.have.status(200);
         expect(res).to.be.json;
         expect(res.body).to.be.a('array');
+        expect(res.body).to.have.length(count);
       });
   });
 
-  it('should return a list with the correct right fields', function () {
-    return chai.request(app)
-      .get('/v2/notes')
-      .then(function (res) {
-        expect(res).to.have.status(200);
-        expect(res).to.be.json;
-        expect(res.body).to.be.a('array');
-        res.body.forEach(function (item) {
-          expect(item).to.be.a('object');
-          expect(item).to.include.keys('id', 'title', 'content');
+  it('should return a list with the correct fields', function () {
+    let data;
+    return knex.select()
+      .from('notes')
+      .then((_data) => {
+        data = _data;
+        return chai.request(app).get('/v2/notes')
+        .then(function (res) {
+          expect(res).to.have.status(200);
+          expect(res).to.be.json;
+          expect(res.body).to.be.a('array');
+          expect(data[0]).to.include.keys('title', 'folder_id');
+          res.body.forEach(function (item) {
+            expect(item).to.be.a('object');
+            expect(item).to.include.keys('id', 'title', 'content');
         });
       });
+      });
+    
   });
 
   it('should return correct search results for a valid query', function () {
-    return chai.request(app)
-      .get('/v2/notes?searchTerm=5%20life')
-      .then(function (res) {
-        expect(res).to.have.status(200);
-        expect(res).to.be.json;
-        expect(res.body).to.be.a('array');
-        expect(res.body).to.have.length(1);
-        expect(res.body[0]).to.be.an('object');
-        expect(res.body[0].id).to.equal(1000);
+    let data;
+    knex.select()
+      .from('notes')
+      .where('title', 'like', '%life%')
+      .then((_data) => {
+        data = _data;
+        return chai.request(app).get('/v2/notes?searchTerm=5%20life')
+        .then(function (res) {
+          expect(res).to.have.status(200);
+          expect(res).to.be.json;
+          expect(res.body).to.be.a('array');
+          expect(res.body).to.have.length(1);
+          //expect(data).to.have.length(1);
+          expect(data[0]).to.be.an('object');
+          expect(data[0]).to.include.keys('folder_id');
+          expect(res.body[0]).to.be.an('object');
+          expect(res.body[0].id).to.equal(1000);
       });
+    });
+    
   });
 
   it('should return an empty array for an incorrect query', function () {
@@ -144,18 +181,18 @@ describe('GET /v2/notes/:id', function () {
       });
   });
 
-  // it('should respond with a 404 for an invalid id', function () {
-  //   const spy = chai.spy();
-  //   return chai.request(app)
-  //     .get('/v2/notes/9999')
-  //     .then(spy)
-  //     .then(() => {
-  //       expect(spy).to.not.have.been.called();
-  //     })
-  //     .catch(err => {
-  //       expect(err.response).to.have.status(404);
-  //     });
-  // });
+  it('should respond with a 404 for an invalid id', function () {
+    const spy = chai.spy();
+    return chai.request(app)
+      .get('/v2/notes/9999')
+      .then(spy)
+      .then(() => {
+        expect(spy).to.not.have.been.called();
+      })
+      .catch(err => {
+        expect(err.response).to.have.status(404);
+      });
+  });
 
 });
 
@@ -230,24 +267,24 @@ describe('PUT /v2/notes/:id', function () {
       });
   });
 
-  // it('should respond with a 404 for an invalid id', function () {
-  //   const updateItem = {
-  //     'title': 'What about dogs?!',
-  //     'content': 'woof woof',
-  //     'tags': []
-  //   };
-  //   const spy = chai.spy();
-  //   return chai.request(app)
-  //     .put('/v2/notes/9999')
-  //     .send(updateItem)
-  //     .then(spy)
-  //     .then(() => {
-  //       expect(spy).to.not.have.been.called();
-  //     })
-  //     .catch(err => {
-  //       expect(err.response).to.have.status(404);
-  //     });
-  // });
+  it('should respond with a 404 for an invalid id', function () {
+    const updateItem = {
+      'title': 'What about dogs?!',
+      'content': 'woof woof',
+      'tags': []
+    };
+    const spy = chai.spy();
+    return chai.request(app)
+      .put('/v2/notes/9999')
+      .send(updateItem)
+      .then(spy)
+      .then(() => {
+        expect(spy).to.not.have.been.called();
+      })
+      .catch(err => {
+        expect(err.response).to.have.status(404);
+      });
+  });
 
   it('should return an error when missing "title" field', function () {
     const updateItem = {
@@ -263,7 +300,7 @@ describe('PUT /v2/notes/:id', function () {
       })
       .catch(err => {
         const res = err.response;
-        //expect(res).to.have.status(400);
+        expect(res).to.have.status(400);
         expect(res).to.be.json;
         expect(res.body).to.be.a('object');
         expect(res.body.message).to.equal('Missing `title` in request body');

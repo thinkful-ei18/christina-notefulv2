@@ -2,6 +2,8 @@
 
 const knex = require('../../knex');
 
+// console.log(knex);
+
 function seedDataFolders() {
   const folders = require('./folders');
   return knex('folders').del()
